@@ -1,0 +1,313 @@
+---
+title: "Homework Template"
+output:
+  html_document: default
+  pdf_document: default
+date: "2023-10-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## QUESTION 01: Data Visualisation for Science Communication
+
+*Create a figure using the Palmer Penguin dataset that is correct but badly communicates the data. **Do not make a boxplot**.*
+
+*Use the following references to guide you:*
+
+-   [*https://www.nature.com/articles/533452a*](https://www.nature.com/articles/533452a){.uri}
+-   [*https://elifesciences.org/articles/16800*](https://elifesciences.org/articles/16800){.uri}
+
+*Note: Focus on visual elements rather than writing misleading text on it.*
+
+### a) Provide your figure here:
+```{r - installing required packages, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+install.packages(c("ggplot2", "palmerpenguins","janitor", "dplyr"))
+
+```
+
+```{r - loading required packages, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+
+library(palmerpenguins)
+library(janitor)
+library(dplyr)
+library(ggplot2)
+
+```
+
+```{r - generating necessary tibbles for misleading graph, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+#make specific dataset with what you're interested in: body mass and species
+byspecies2<- penguins %>%
+  select(species, body_mass_g)
+
+#make specific dataset with sps grouped
+byspecies3<- group_by(byspecies2, species)
+#now make specific dataset with the sps and their means
+byspecies4<-summarise(byspecies3, mean_mass=mean(body_mass_g, na.rm=TRUE), sd_mass=sd(body_mass_g, na.rm=TRUE))
+byspecies4
+```
+
+```{r - generating the misleading graph, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+
+#now make the graph using the previous tibbles you made
+misleading_graph<- ggplot(byspecies4, aes(x = species, y = mean_mass, fill = species)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values=c("Adelie"="#FFB90F", "Chinstrap"="#00CD00", "Gentoo"="#8DEEEE"))+
+  labs(x="Penguin species", y="Mean body mass (g)", title = "Mean Body Mass of 3 Penguin Species, +/- 1 standard deviation")+
+  theme_light()+
+  guides(fill="none")+
+  geom_errorbar(aes(ymin = mean_mass-sd_mass, ymax=mean_mass+sd_mass), width = 0.3, colour = "red") +
+  coord_cartesian(ylim = c(min((byspecies4$mean_mass)-(byspecies4$sd_mass)), max((byspecies4$mean_mass)+(byspecies4$sd_mass))))
+
+misleading_graph
+
+```
+
+
+### b) Write about how your design choices mislead the reader about the underlying data (200-300 words).
+
+Although this graph is factually correct (no incorrect data has been included), it is misleading and unhelpful due to my design choices. Firstly, the y axis has been truncated, and does not start from 0. On bar graphs, this is misleading, leading to viewers perceiving larger differences in mean body mass between species, because the ratio of heights between bars is not representative of the actual ratio of mean body mass between species (Yang et al, 2021). This graph makes it seem as though mean Gentoo penguin body mass is around 3x greater than Adelies or Chinstraps, whereas the true value is more similar to 1.4x greater.
+In addition, it may also be misleading viewers about the data, as it is the wrong choice of graph: it is showing the effect of a categorical variable (species) on a numerical variable (body mass) - the best type of graph to show this would be a box-and-whisker plot. Using a bar chart omits valuable information, such as the the range of the data or the presence of outliers (which would result in the mean / standard deviation being a poor measure of the average / distribution of the sample). It also doesn't include any information about the shape of the distributions of body mass for each species, which would be valuable information if going on to carry out a statistical test around whether body mass varies between penguin species (Edson, 2015). 
+
+Overall, this graph is misleading due to its truncated y axis, and also due to its omission of important features of the data such as outliers, range, and data distribution.
+
+References: 
+- Edson, Z (2015) Description of continuous data using bar graphs: a misleading approach. Revisita da Sociedade Brasileira de Medicina Tropical, 48(4), p494-497
+
+- Yang, B; Vargas Restrepo, C; Stanley, M; Marsh, E (2021) Truncating bar graphs persistently misleads viewers. Journal of Applied Research in Memory and Cognition, 10(2), p298-311
+
+
+------------------------------------------------------------------------
+
+## QUESTION 2: Data Pipeline
+
+*Write a data analysis pipeline in your .rmd RMarkdown file. You should be aiming to write a clear explanation of the steps as well as clear code.*
+
+*Your code should include the steps practiced in the lab session:*
+
+-   *Load the data*
+
+-   *Appropriately clean the data*
+
+-   *Create an Exploratory Figure (**not a boxplot**)*
+
+-   *Save the figure*
+
+-   ***New**: Run a statistical test*
+
+-   ***New**: Create a Results Figure*
+
+-   *Save the figure*
+
+*An exploratory figure shows raw data, such as the distribution of the data. A results figure demonstrates the stats method chosen, and includes the results of the stats test.*
+
+*Between your code, communicate clearly what you are doing and why.*
+
+*Your text should include:*
+
+-   *Introduction*
+
+-   *Hypothesis*
+
+-   *Stats Method*
+
+-   *Results*
+
+-   *Discussion*
+
+-   *Conclusion*
+
+*You will be marked on the following:*
+
+### a) Your code for readability and functionality
+
+### b) Your figures for communication
+
+### c) Your text communication of your analysis
+
+
+------------------------------------------------------------------------
+
+### Introduction
+
+The penguin dataset contains many variables. 2 variables which may perhaps be related include body mass, and flipper length: flipper length could be indicative of a larger size of penguin, which might be associated with a higher body mass. Therefore, it would be interesting to analyse the relationship of these variables. 
+
+However, there are other variables recorded in the dataset which might affect body mass or flipper length - for instance, if penguins are sexually dimorphic, sex may also impact body mass or flipper length. Species may also play a role: some species may have different relationships between body mass and flipper length than others. Therefore, before conducting a statistical test of the association of penguin flipper length and body mass, I will create an exploratory plot, to look at the relationship of penguin flipper length and body mass between different species and sexes.
+
+This coding section will involve installing and loading required packages; cleaning & saving the data; creating a dataset with only the variables of interest; and using them to plot & save a scattergraph. 
+
+```{r Data Exploration, warning=FALSE}
+###INITIAL DATA CLEANING
+
+# install the packages required
+install.packages(c("ggplot2", "palmerpenguins","janitor", "dplyr", "svglite", "ragg"))
+
+#load the packages required
+library(ggplot2)
+library(palmerpenguins)
+library(janitor)
+library(dplyr)
+library(svglite)
+library(ragg)
+
+#load the function definition files we will use, from the folder 'functions'
+source("functions/cleaning.r")
+source("functions/plotting.r")
+
+#save raw data for future reference, in the 'data' file of the project
+write.csv(penguins_raw, "data/penguins_raw.csv")
+
+#clean the raw data (penguins_raw)
+  #turn it into a new dataset (penguins_clean): avoids overwriting raw data 
+  #this means we can return to it if there are errors in the pipeline
+#we will use functions from 'cleaning.R' file in 'functions' folder
+  #enables the code here to be concise: greater detail in 'cleaning.R' file if needed
+penguins_clean <- penguins_raw %>%
+  clean_column_names() %>%
+  shorten_species() %>%
+  remove_empty_columns_rows()
+penguins_clean
+
+#check the cleaned data to ensure the variable names appear as desired
+names(penguins_clean)
+
+#save the clean data for future reference, in the 'data' folder of the project
+write.csv(penguins_clean, "data/penguins_clean.csv")
+
+###EXPLORATORY FIGURE CODE
+
+#first: filter the clean data into a new dataset
+  #new dataset will include only the variables we are interested in here:
+  #flipper length, body mass, species, and sex
+#use a pipeline: subset & remove NAs (which aren't useful observations to the analysis)
+  #these functions come from the cleaning file used before
+penguins_explore <- penguins_clean %>%
+  subset_columns(c("flipper_length_mm", "body_mass_g", "species", "sex")) %>%
+  remove_NA()
+
+#check the subsetted data
+names(penguins_explore)
+
+#save the subsetted data to the 'data' folder, for future reference
+write.csv(penguins_explore, "data/penguins_explore.csv")
+
+#now we can write the code for the graph
+  #we will use a plotting function, defined in the 'plotting folder'
+exploratory_figure <- plot_exploratory_figure(penguins_explore)
+exploratory_figure
+
+#save the exploratory figure as a .svg to the 'figures' folder
+  #use a function from the 'plotting' file
+save_exploratory_figure_svg(penguins_explore,
+                              "figures/fig01_vector.svg",
+                              size = 15, scaling = 1)
+
+
+#save the exploratory figure as a .png to the 'figures' folder
+  #use a function from the 'plotting' file
+save_exploratory_figure_png(penguins_explore,
+                              "figures/fig01_report.png",
+                              size = 15, res = 600, scaling = 1)
+```
+
+### Hypothesis
+
+From the exploratory figure, it looks like there is a positive correlation between flipper length and body mass: higher flipper length is associated with higher body mass. However, it also looks like species impacts flipper length & body mass: Gentoos and males have higher flipper length and body mass than Adelies & Chinstraps. Sex also has an impact on flipper length & body mass: males have higher flipper length and body mass than females.
+
+This graph shows up many potentially interesting questions that could be statistically tested. The assignment does not allow box plots, which would be the best type of results figure for investigating the relationship of one numerical variable and one categorical variable. Therefore, the remaining test available is to test the relationship between the two numerical variables: flipper length and body mass. 
+Since species and sex appear that they could be influencing body mass and flipper length, to avoid any effects caused by species or sex, I will control for this in my statistical analysis, by only testing one species and one sex. I will test female Gentoos, as it appears from the exploratory plot that this may be one of the stronger associations. 
+
+The data in the plot appears quite dispersed, so it seems unlikely that it would be possible to accurately predict body mass from flipper data by using a linear regression analysis. Therefore, I will conduct a linear correlation coefficient test, to see whether there is a statistically significant correlation of flipper length and body mass in female Gentoo penguins.
+
+H0 (Null hypothesis): the population correlation coefficient of female Gentoo flipper length and body mass = 0 (no correlation)
+
+H1 (Alternate hypothesis): the population correlation coefficient of female Gentoo flipper length and body mass does not = 0 (there is a correlation of some sort)
+
+
+I will first filter the data to contain only the flipper length and body mass of female Gentoo penguins; then calculate the sample correlation coefficient (r); and then test if this is significantly different from 0. This test will use alpha = 0.05 as the significance level.
+
+
+### Statistical Methods
+
+```{r Statistical methods, warning=FALSE}
+
+##SUBSET THE DATA
+#subset the data for female Gentoo penguins flipper length & body mass, & remove NAs
+  #use functions from the cleaning file
+penguins_female_gentoo <- penguins_clean %>%
+  filter_by_species("Gentoo")%>%
+  filter_by_sex("FEMALE")%>%
+  subset_columns(c("flipper_length_mm", "body_mass_g")) %>%
+  remove_NA()
+
+#check the subsetted data - ensure it has the columns we are interested in
+head(penguins_female_gentoo)
+
+#save the subsetted data to the 'data' folder, for future reference
+write.csv(penguins_female_gentoo, "data/penguins_female_gentoo.csv")
+
+##STATS ANALYSIS
+#look at whether there is a statistically significant correlation
+  ##calculate r
+r <- cor(penguins_female_gentoo$flipper_length_mm,
+         penguins_female_gentoo$body_mass_g)
+  #test if the correlation is statistically significant
+cor.test(penguins_female_gentoo$flipper_length_mm, penguins_female_gentoo$body_mass_g)
+  #new variable: 'p_value' - stores p_value output in, for use in the results figure
+p_value <- cor.test(penguins_female_gentoo$flipper_length_mm,
+                    penguins_female_gentoo$body_mass_g)$p.value
+
+```
+
+
+### Results & Discussion
+
+Correlation coefficient of sample: 0.488
+
+This indicates a fairly positive correlation, demonstrating that as female Gentoo flipper length increases, body length also tends to increase.
+
+Output of statistical test:
+
+p value of the test: p<0.001
+
+This indicates the correlation observed is statistically significantly different from 0 (p<0.001), as the p value is below the alpha level of 0.05. This means it is very unlikely that the sample correlation value was observed due to chance, and there is strong evidence to reject the null hypothesis (which was that the population correlation coefficient = 0).
+
+95% confidence interval for the r estimate: 0.262 < r < 0.662
+
+This is a fairly broad confidence interval, so it is difficult to be sure of the exact value of the population correlation coefficient from this statistical analysis. However, in accordance with the p value, the 95% confidence interval doesn't overlap with the null hypothesis value of r (0 is not within the range of the 95% confidence interval), so we can confidently reject the null hypothesis. 
+
+To visualise this, I will create a results figure, consisting of a scatterplot of the relavant data points (female Gentoo penguins only), and annotated with the calculated correlation coefficient (r) and result of the statistical test (p-value). These will be saved to the 'figures' file of the R project
+
+
+```{r Plotting Results, warning=FALSE}
+
+#we will use a plotting function, defined in the 'plotting folder'
+source("functions/plotting.r")
+results_figure <- plot_results_figure(penguins_female_gentoo)
+results_figure
+
+#save the exploratory figure as a .svg to the 'figures' folder
+  #use a function from the 'plotting' file
+save_results_figure_svg(penguins_female_gentoo,
+                              "figures/fig02_vector.svg",
+                              size = 20, scaling = 1.2)
+
+
+#save the exploratory figure as a .png to the 'figures' folder
+  #use a function from the 'plotting' file
+save_results_figure_png(penguins_female_gentoo,
+                              "figures/fig02_report.png",
+                              size = 20, res = 600, scaling = 1.2)
+
+
+```
+
+### Conclusion
+
+In conclusion, female Gentoo penguin flipper length is significantly positively correlated with body mass. This might be because longer flippers are indicative of larger sizes of penguins, which have a larger body mass. There are a number of follow-up analyses which could be performed on this dataset: for instance, the relative impacts of sex and species on this correlation would be particularly interesting to understand. In addition, it could also be investigated whether other physiological features of penguins are correlated with body mass, and these correlations may also differ based on the ages of penguins concerned, which was not included in this dataset.  Potential applications of this information include informing understanding of penguin anatomy and development.
+
+------------------------------------------------------------------------
+
